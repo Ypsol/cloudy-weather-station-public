@@ -1,7 +1,8 @@
 #ifndef FAN_H
 #define FAN_H
+
 #include <Arduino.h>
-#include <time.h>
+
 #define FAN_PIN 10
 #define FAN_SPEED_OFF 0
 #define FAN_SPEED_VERY_LOW 10
@@ -10,16 +11,14 @@
 #define FAN_SPEED_HIGH 255
 #define FAN_SPEED_LEVEL_COUNT 5
 
-
-class Fan{
+class Fan {
 private:
     uint8_t pin;
-    uint16_t duration;
     uint8_t currentLevel;
     static const uint8_t levels[FAN_SPEED_LEVEL_COUNT];
 
 public:    
-    Fan(uint8_t pin);
+    Fan(uint8_t pin = FAN_PIN);
     void init(void);
     void on();
     void off();
@@ -29,4 +28,4 @@ public:
     uint8_t getSpeedLevel(void);
 };
 
-#endif
+#endif // FAN_H

@@ -141,22 +141,26 @@ String getMonitoringHTML(void){
   html += "</div>";
   html += "</div>";
   html += "<div class=\"card\"><div id=\"ts-link\"></div></div>";
-  html += "<div class=\"ts-iframe-box\">";
-  html += "<div class=\"card\" style=\"margin:10px;\">";
-  html += "<iframe class=\"ts-iframe\" style=\"border:0px;\" src=\"https://thingspeak.mathworks.com/channels/";
-  html+= THINGSPEAK_CHANNEL;
-  html+= "/charts/1?bgcolor=%23121212&color=%23FF6B6B&days=2&dynamic=true&results=20&type=line&width=auto&height=auto&api_key=";
-  html += THINGSPEAK_KEY;
-  html += "\"></iframe>";
-  html += "</div>";
-  html += "<div class=\"card\" style=\"margin:10px;\">";
-  html += "<iframe class=\"ts-iframe\" style=\"border:0px;\" src=\"https://thingspeak.mathworks.com/channels/";
-  html+= THINGSPEAK_CHANNEL;
-  html+= "/charts/2?bgcolor=%23121212&color=%23FF6B6B&days=2&dynamic=true&results=20&type=line&width=auto&height=auto&api_key=";
-  html += THINGSPEAK_KEY;
-  html += "\"></iframe>";
-  html += "</div>";
-  html += "</div>";
+
+  if (String(THINGSPEAK_CHANNEL).length() > 0 && String(THINGSPEAK_KEY).length() > 0) {
+    html += "<div class=\"ts-iframe-box\">";
+    html += "<div class=\"card\" style=\"margin:10px;\">";
+    html += "<iframe class=\"ts-iframe\" style=\"border:0px;\" src=\"https://thingspeak.mathworks.com/channels/";
+    html += THINGSPEAK_CHANNEL;
+    html += "/charts/1?bgcolor=%23121212&color=%23FF6B6B&days=2&dynamic=true&results=20&type=line&width=auto&height=auto&api_key=";
+    html += THINGSPEAK_KEY;
+    html += "\"></iframe>";
+    html += "</div>";
+    html += "<div class=\"card\" style=\"margin:10px;\">";
+    html += "<iframe class=\"ts-iframe\" style=\"border:0px;\" src=\"https://thingspeak.mathworks.com/channels/";
+    html += THINGSPEAK_CHANNEL;
+    html += "/charts/2?bgcolor=%23121212&color=%23FF6B6B&days=2&dynamic=true&results=20&type=line&width=auto&height=auto&api_key=";
+    html += THINGSPEAK_KEY;
+    html += "\"></iframe>";
+    html += "</div>";
+    html += "</div>";
+  }
+
   html += "</div>"; // end tab-monitoring
   html += "<div class=\"tab-panel\" id=\"tab-fan\">";
   html += "<div class=\"fan-card card\">";
@@ -221,7 +225,7 @@ String getMonitoringHTML(void){
   html += "S.hum=j.hum!=null?j.hum:'--';";
   html += "S.aqi=j.aqi!=null?j.aqi:0;";
   html += "S.tvoc=j.tvoc!=null?j.tvoc:0;";
-  html += "S.eco2=j.ec02!=null?j.ec02:'--';";
+  html += "S.eco2=j.eco2!=null?j.eco2:'--';";
   html += "S.dew=dew(j.temp,j.hum);";
   html += "TS.status='ok';TS.last=hms();TS.err=null;";
   html += "render();renderTs();})";
@@ -246,7 +250,7 @@ String getMonitoringHTML(void){
   html += "g('tabBtnFan').className='tab-btn'+(name==='fan'?' active':'');}";
   html += "function onFanSlide(v){g('fanLevelLabel').textContent=FAN_LABELS[v];";
   html += "clearTimeout(fanSlideTimer);";
-  html += "fanSlideTimer=setTimeout(function(){setFanLevel(v)},150);}"; // near real-time while dragging
+  html += "fanSlideTimer=setTimeout(function(){setFanLevel(v)},150);}";
   html += "function onFanChange(v){setFanLevel(v);}";
   html += "function setFanLevel(v){fetch('/fan?level='+v).then(function(r){return r.json()})";
   html += ".then(function(j){g('fanSlider').value=j.level;g('fanLevelLabel').textContent=FAN_LABELS[j.level];})";
@@ -255,7 +259,7 @@ String getMonitoringHTML(void){
   html += ".then(function(j){g('fanSlider').value=j.level;g('fanLevelLabel').textContent=FAN_LABELS[j.level];})";
   html += ".catch(function(e){console.error('Fan init error',e);});}";
   html += "initFan();";
-  html += "<\/script>";
+  html += "</script>";
   html += "</body></html>";
   return html;
 }
@@ -288,9 +292,8 @@ void WiFiEvent(WiFiEvent_t event) {
 Connectivity::Connectivity(void) : server(80){
     this->ssid = WIFI_SSID;
     this->password = WIFI_PASSWORD;
-    if (THINGSPEAK_KEY == "")thingspeak_activated = false; //If thingspeak is not wanted
+    if (String(THINGSPEAK_KEY) == "") thingspeak_activated = false;
     else thingspeak_activated = true;
-    this->emergency_mode = false;
     this->thingspeak = THINGSPEAK_KEY;
     this->fan = nullptr;
     WiFi.onEvent(WiFiEvent);
@@ -300,13 +303,17 @@ void Connectivity::setFan(Fan* fan){
     this->fan = fan;
 }
 
+void Connectivity::updateData(sensorData data){
+    this->dataCopy = data;
+}
+
 bool Connectivity::connect(void){
 
     WiFi.setSleep(false);
     WiFi.mode(WIFI_STA);
-    esp_wifi_set_max_tx_power(WIFI_POWER_8_5dBm); //Most stable TX power
+    esp_wifi_set_max_tx_power(WIFI_POWER_8_5dBm); // Most stable TX power
 
-    //Desactivate PMF on WiFi (useful for severals AP)
+    // Disable PMF on WiFi (useful for several APs)
     wifi_config_t conf;
     esp_wifi_get_config(WIFI_IF_STA, &conf);
     conf.sta.pmf_cfg.capable = false;
@@ -318,20 +325,20 @@ bool Connectivity::connect(void){
 
     uint8_t count = 0;
     WiFi.begin(this->ssid, this->password);
-    while (WiFi.status() != WL_CONNECTED && count<WIFI_TIMEOUT){
+    while (WiFi.status() != WL_CONNECTED && count < WIFI_TIMEOUT){
         Serial.print(".");
         count++;
         delay(500);
     }
     if (WiFi.status() == WL_CONNECTED){
         WiFi.setSleep(true);
-        Serial.println("Succeed!");
-        Serial.print("[INFO] IP address (save it!) : ");
+        Serial.println(" Succeed!");
+        Serial.print("[INFO] IP address : ");
         Serial.println(WiFi.localIP());
         return true;
     }
     else{
-        Serial.println("Failed.");
+        Serial.println(" Failed.");
         return false;
     }
 }
@@ -344,7 +351,7 @@ bool Connectivity::reconnect(void){
 
 void Connectivity::disconnect(void){
     WiFi.disconnect();
-    http.end(); //Making sure http client is ended
+    http.end(); // Making sure http client is ended
     Serial.println("[INFO] WiFi successfully disconnected.");
 }
 
@@ -358,65 +365,51 @@ bool Connectivity::sendData(sensorData data){
         }
     }
 
-    Serial.printf("[INFO] Sending data to Thinspeak : %s", this->thingspeak);
+    Serial.printf("[INFO] Sending data to ThingSpeak : %s\n", this->thingspeak);
     char url[150];
-    snprintf(url, sizeof(url), "http://api.thingspeak.com/update?api_key=%s&field1=%.2f&field2=%.2f&field3=%d&field4=%d&field5=%d", this->thingspeak, data.temperature, data.humidity, data.AQI, data.eC02, data.TVOC);
+    snprintf(url, sizeof(url), "http://api.thingspeak.com/update?api_key=%s&field1=%.2f&field2=%.2f&field3=%d&field4=%d&field5=%d", 
+             this->thingspeak, data.temperature, data.humidity, data.AQI, data.eCO2, data.TVOC);
     this->http.begin(url);
     int response = this->http.GET();
     Serial.printf("[INFO] ThingSpeak response code: %d\n", response);
     this->http.end();
-    if (response == 200){
-        return true;
-    }
-    else{
-        return false;
-    }
+    return (response == 200);
 }
 
 bool Connectivity::startServer(void){
-    if (WiFi.status() != WL_CONNECTED && WiFi.getMode() != WIFI_AP){
-        Serial.println("[ERROR] Can't start server, wifi not connected");
+    if (WiFi.status() != WL_CONNECTED){
+        Serial.println("[ERROR] Can't start server, WiFi not connected");
         return false;
     }
-    else if (WiFi.getMode() == WIFI_STA){
-        this->server.on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
-                String html = getMonitoringHTML();
-                request->send(200, "text/html", html);
-            });
 
-        this->server.on("/data", HTTP_GET, [this](AsyncWebServerRequest *request) {
-            String json = "{\"temp\":"+ String(this->dataCopy.temperature)+
-                    ",\"hum\":" + String(this->dataCopy.humidity) +
-                    ",\"aqi\":" + String(this->dataCopy.AQI) +
-                    ",\"ec02\":" + String(this->dataCopy.eC02) +
-                    ",\"tvoc\":" + String(this->dataCopy.TVOC) + "}"; 
-            request->send(200, "text/json", json);
-        });
+    this->server.on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        String html = getMonitoringHTML();
+        request->send(200, "text/html", html);
+    });
 
-        this->server.on("/fan", HTTP_GET, [this](AsyncWebServerRequest *request) {
-            if (this->fan != nullptr && request->hasParam("level")){
-                int level = request->getParam("level")->value().toInt();
-                if (level < 0) level = 0;
-                this->fan->setSpeedLevel((uint8_t)level);
-            }
-            uint8_t currentLevel = (this->fan != nullptr) ? this->fan->getSpeedLevel() : 0;
-            String json = "{\"level\":" + String(currentLevel) + "}";
-            request->send(200, "text/json", json);
-        });
-    }
+    this->server.on("/data", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        String json = "{\"temp\":"+ String(this->dataCopy.temperature)+
+                ",\"hum\":" + String(this->dataCopy.humidity) +
+                ",\"aqi\":" + String(this->dataCopy.AQI) +
+                ",\"eco2\":" + String(this->dataCopy.eCO2) +
+                ",\"tvoc\":" + String(this->dataCopy.TVOC) + "}"; 
+        request->send(200, "application/json", json);
+    });
+
+    this->server.on("/fan", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        if (this->fan != nullptr && request->hasParam("level")){
+            int level = request->getParam("level")->value().toInt();
+            if (level < 0) level = 0;
+            this->fan->setSpeedLevel((uint8_t)level);
+        }
+        uint8_t currentLevel = (this->fan != nullptr) ? this->fan->getSpeedLevel() : 0;
+        String json = "{\"level\":" + String(currentLevel) + "}";
+        request->send(200, "application/json", json);
+    });
+
     this->server.begin();
-    Serial.println("[INFO] Server started");
+    Serial.println("[INFO] Web server started");
     return true;
-}
-
-void Connectivity::testMode(void){
-    if (WiFi.status() == WL_CONNECTED){
-        WiFi.disconnect();
-    }
-    WiFi.mode(WIFI_AP);
-    WiFi.softAP("Cloudy", "cloudystation");
-    Serial.println("[INFO] AP successfully started. (pw = cloudystation)");
-
 }
 
 void Connectivity::deinit(void){

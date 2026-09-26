@@ -62,16 +62,12 @@ CRGBPalette16 Led::convertLevelToPalette(uint8_t level)
         return bluePalette;
     case 2:
         return greenPalette;
-        break;
     case 3:
         return yellowPalette;
-        break;
     case 4:
         return orangePalette;
-        break;
     case 5:
         return redPalette;
-        break;
     default:
         return whitePalette;
     }
@@ -86,7 +82,7 @@ void Led::on(void)
         FastLED.setBrightness(i);
         FastLED.show();
         delay(LED_FADE_DELAY);
-    };
+    }
     this->brightness = LEDS_BRIGHTNESS;
 }
 
@@ -97,7 +93,7 @@ void Led::off(void)
         FastLED.setBrightness(i);
         FastLED.show();
         delay(LED_FADE_DELAY);
-    };
+    }
     this->brightness = 0;
 }
 
@@ -108,11 +104,11 @@ void Led::sleep()
         FastLED.setBrightness(i);
         FastLED.show();
         delay(LED_FADE_DELAY);
-    };
+    }
     this->brightness = LED_SLEEP_BRIGHTNESS;
 }
 
-void Led::fadetoPalette(CRGBPalette16 new_palette)
+void Led::fadeToPalette(CRGBPalette16 new_palette)
 {
     CRGB old_strip[NUM_LEDS];
     for (int i = 0; i < NUM_LEDS; i++)
@@ -143,7 +139,7 @@ void Led::changeLevel(uint8_t newLevel)
     Serial.printf("[INFO] Changing level (%d->%d)\n", this->level, newLevel);
 
     CRGBPalette16 new_palette = convertLevelToPalette(newLevel);
-    fadetoPalette(new_palette);
+    fadeToPalette(new_palette);
     this->level = newLevel;
 }
 
@@ -198,6 +194,7 @@ void Led::error(uint8_t code)
         break;
 
     case 3: // Sensor data refresh Error
+    default:
         for (int cycle = 0; cycle < 2; cycle++)
         {
             // Fade in
@@ -221,7 +218,7 @@ void Led::error(uint8_t code)
         break;
     }
     CRGBPalette16 new_palette = convertLevelToPalette(this->level);
-    fadetoPalette(new_palette);
+    fadeToPalette(new_palette);
 }
 
 void Led::handleLeds(void)
@@ -235,6 +232,6 @@ void Led::handleLeds(void)
 
 void Led::testMode()
 {
-    int newLevel = (this->level + 1)%6;
+    int newLevel = (this->level + 1) % 6;
     changeLevel(newLevel);
 }

@@ -8,7 +8,6 @@
 #define TIMEOUT 10
 #define MEASURES_DELAY 60
 
-sensorData datas;
 Fan fan(FAN_PIN);
 Sensor sensor(SDA_PIN, SCL_PIN);
 Led led;
@@ -28,7 +27,7 @@ void setup()
   if (!sensor.init())
   {
     Serial.println("[ERROR] Sensor failed to initialize, restarting...");
-    led.error(3);
+    led.error(2);
     delay(3000);
     ESP.restart();
   }
@@ -38,9 +37,10 @@ void setup()
   if (!connectivity.connect())
   {
     led.error(1);
-    Serial.println("[ERROR] WiFi failed, passing...");
+    Serial.println("[ERROR] WiFi connection failed, continuing in offline mode...");
   }
-  else{
+  else
+  {
     connectivity.startServer();
   }
 
@@ -52,7 +52,6 @@ void setup()
   fan.on();
 
   Serial.println("[INFO] Station successfully started!");
-  Serial.println(ESP.getFlashChipSize());
 }
 
 void loop()
@@ -70,19 +69,22 @@ void loop()
       }
       if (count >= TIMEOUT)
       {
-        Serial.println("[ERROR] Timeout exceeded");
-        led.error(4);
+        Serial.println("[ERROR] Timeout exceeded for sensor reading");
+        led.error(3);
       }
     }
     else
     {
-      sensorData datas = sensor.getDatas(); // Fill the sensorData structure with fresh data
-      if (connectivity.thingspeak_activated) connectivity.sendData(datas);
-      led.changeLevel(datas.AQI); // Change the led color according to AQI level
-      sensor.printDatas();        // Optional, to debug
+      sensorData data = sensor.getData();
+      connectivity.updateData(data); // Always update local server data
+      if (connectivity.thingspeak_activated)
+      {
+        connectivity.sendData(data);
+      }
+      led.changeLevel(data.AQI); // Update LED color based on AQI
+      sensor.printData();        // Print to serial monitor
     }
   }
-
 
   EVERY_N_MILLISECONDS(15)
   {

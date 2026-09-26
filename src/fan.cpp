@@ -8,16 +8,16 @@ const uint8_t Fan::levels[FAN_SPEED_LEVEL_COUNT] = {
     FAN_SPEED_HIGH
 };
 
-Fan::Fan(uint8_t pin = FAN_PIN){
+Fan::Fan(uint8_t pin){
     this->pin = pin;
     this->currentLevel = 0;
-};
+}
 
 void Fan::init(){
-    ledcAttach(pin,  25000, 10);
+    ledcAttach(pin, 25000, 10);
     digitalWrite(pin, LOW);
-    Serial.printf("[FAN] Initialized : Pin=%d, Dur=%d \n", pin, duration);
-};
+    Serial.printf("[FAN] Initialized : Pin=%d\n", pin);
+}
 
 void Fan::on(void){
     ledcWrite(pin, FAN_SPEED_VERY_LOW);
@@ -34,9 +34,9 @@ void Fan::deinit(void){
     ledcWrite(pin, 0);
     ledcDetach(pin);
     gpio_reset_pin((gpio_num_t)pin);
-    pinMode(FAN_PIN, OUTPUT);
-    digitalWrite(FAN_PIN, LOW);
-    Serial.printf("[FAN] Deinitialized : Pin=%d, Dur=%d", pin, duration);
+    pinMode(pin, OUTPUT);
+    digitalWrite(pin, LOW);
+    Serial.printf("[FAN] Deinitialized : Pin=%d\n", pin);
 }
 
 void Fan::setSpeedLevel(uint8_t level){
@@ -51,7 +51,6 @@ uint8_t Fan::getSpeedLevel(void){
 }
 
 void Fan::testMode(void){
-    
     while (true){
         ledcWrite(pin, FAN_SPEED_VERY_LOW);
         Serial.println(FAN_SPEED_VERY_LOW);

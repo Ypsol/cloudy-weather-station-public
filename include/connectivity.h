@@ -1,18 +1,18 @@
 #ifndef CONNECTIVITY_H
 #define CONNECTIVITY_H
+
+#include <Arduino.h>
 #include "esp_wifi.h"
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ESPAsyncWebServer.h>
-#include "creditentials.h" //WIFI_PASSWORD AND WIFI_SSID
+#include "credentials.h"
 #include "sensor.h"
 #include "fan.h"
+
 #define WIFI_TIMEOUT 15
 
-#define EMERGENCY_SSID "Cloudy"
-#define EMERGENCY_PASSWORD "CloudyTheBest"
-
-class Connectivity{
+class Connectivity {
 private:
     AsyncWebServer server;
     const char* ssid;
@@ -24,17 +24,16 @@ private:
 
 public:
     bool thingspeak_activated;
-    bool emergency_mode;
 
     Connectivity(void);
     bool connect(void);
     bool reconnect(void);
     void disconnect(void);
     bool startServer(void);
+    void updateData(sensorData data);
     bool sendData(sensorData data);
-    void testMode(void);
     void deinit(void);
-    void setFan(Fan* fan); // Link the Fan instance so the web server can read/set its speed
+    void setFan(Fan* fan);
 };
 
-#endif
+#endif // CONNECTIVITY_H
